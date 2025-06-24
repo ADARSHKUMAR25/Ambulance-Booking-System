@@ -1,9 +1,7 @@
 from flask import Flask, render_template, redirect, request, session, url_for, jsonify
-from vercel_wsgi import handle_request
-from datetime import datetime
-from .models import db, Fare, Booking, Query
-
-app = Flask(__name__)
+from flask import current_app as app
+from .models import *
+from datetime import datetime # Ensure datetime is imported if not already
 
 @app.route("/")
 def index():
@@ -37,7 +35,7 @@ def delete_fare(fare_id):
 
 @app.route("/logout")
 def logout():
-    return redirect(url_for("login"))
+    return render_template("/login")
 
 @app.route("/bookings")
 def bookings():
@@ -88,12 +86,13 @@ def setting():
 
 @app.route("/blog")
 def blog():
-    return render_template("user/blog.html")
+    return render_template("user/blog")
 
 @app.route("/user-dashboard")
 def user_dashboard():
-    return render_template("user/user-dashboard.html")
+    return render_template("user/user-dashboard")
 
+# New API endpoint to get fare data for the user dashboard
 @app.route("/api/fares", methods=["GET"])
 def api_fares():
     all_fares = Fare.query.all()
@@ -104,6 +103,7 @@ def api_fares():
     } for fare in all_fares]
     return jsonify(fares_data)
 
+# Endpoint for handling user booking submissions
 @app.route("/submit-booking", methods=["POST"])
 def submit_booking():
     pickup = request.form.get("pickup")
@@ -121,13 +121,14 @@ def submit_booking():
         service=service,
         name=name,
         contact=contact,
-        status="Pending",
-        timestamp=datetime.utcnow()
+        status="Pending", # Default status
+        timestamp=datetime.utcnow() # Current UTC time
     )
     db.session.add(new_booking)
     db.session.commit()
     return jsonify({"success": True, "message": "Booking successful! We will contact you shortly."})
 
+# Endpoint for handling user queries
 @app.route("/submit-query", methods=["POST"])
 def submit_query():
     name = request.form.get("name")
@@ -148,7 +149,3 @@ def submit_query():
     db.session.add(new_query)
     db.session.commit()
     return jsonify({"success": True, "message": "Query submitted successfully! We will get back to you soon."})
-
-# 🔥 Required for Vercel entrypoint
-def handler(environ, start_response):
-    return handle_request(app, environ, start_response)
